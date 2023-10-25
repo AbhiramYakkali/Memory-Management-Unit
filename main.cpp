@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "PageTable.h"
+#include "WSClock.h"
 #include "vaddr_tracereader.h"
 #include "log_helpers.h"
 
@@ -25,6 +26,7 @@
 #define DEFAULT_AVAILABLE_FRAMES 999999
 #define DEFAULT_AGE_RECENT_ACCESS 10
 #define MAXIMUM_TOTAL_BITS 28
+#define ADDRESS_LENGTH 32
 
 int main(int argc, char** argv) {
     //default mode is summary
@@ -32,7 +34,12 @@ int main(int argc, char** argv) {
     int ageRecentAccess = DEFAULT_AGE_RECENT_ACCESS;
     int availableFrames = DEFAULT_AVAILABLE_FRAMES;
     //Default: -1, means process all addresses in file
-    int numAddressesToProcess = -1;
+    int numAddressesToProcess = 50;
+    //TODO: Hard coding for testing, remove later
+    availableFrames = 20;
+    ageRecentAccess = 5;
+
+    WSClock clock(ageRecentAccess);
 
     //Process options
     int option;
@@ -73,47 +80,72 @@ int main(int argc, char** argv) {
         }
     }
 
+    //TODO: Values hard coded for testing, change later
     PageTable pageTable(new int[]{4, 6, 8}, 3);
+    int totalPageTableBits = 18;
+
     int currentFrame = 0;
     int misses = 0, totalProcessed = 0;
 
     FILE* addressFile = fopen(argv[1], "r");
     std::ifstream readWriteFile(argv[2]);
     p2AddrTr address;
+    int shiftAmountForAddressToVPN = ADDRESS_LENGTH - totalPageTableBits;
 
     char readWriteMode;
+    //Iterate through the trace file until eof reached or number of processed lines (specified by cmd line argument) is reached
     while(totalProcessed < 50 && NextAddress(addressFile, &address) != EOF) {
-        //std::cout << std::hex << std::setw(8) << std::setfill('0') << address.addr << std::endl;
-        //std::cout << std::hex << std::setw(8) << std::setfill('0') << pageTable.getVPNFromVirtualAddress(address.addr, 3) << std::endl;
         if(mode == MODE_OFFSET) {
             print_num_inHex(pageTable.getVPNFromVirtualAddress(address.addr, 3));
             continue;
         }
-        totalProcessed++;
+
         readWriteFile.get(readWriteMode);
 
-        if(readWriteMode == READ) {
-            //std::cout << "read ";
-            int frame = pageTable.findVPNtoPFNMapping(address.addr);
-            if(frame == -1) {
-                misses++;
+        //Find the frame this VPN is mapped to (if any)
+        int frame = pageTable.findVPNtoPFNMapping(address.addr);
+
+        if(frame == -1) {
+            //VPN is not mapped to any frame
+            misses++;
+
+            if(currentFrame == availableFrames) {
+                //No available frames, perform page replacement
+                auto replacedPageInfo = clock.getFrameToBeReplaced(totalProcessed);
+                int pageToBeReplaced = replacedPageInfo.first;
+                //Assign address to replaced page in the page table
+                pageTable.insertVPNtoPFNMapping(address.addr, pageToBeReplaced);
+                //Set the old address to -1 in the page table (invalid page)
+                pageTable.insertVPNtoPFNMapping(replacedPageInfo.second, -1);
+                //Update address and age info for the replaced page
+                clock.updateFrame(pageToBeReplaced, replacedPageInfo.second, totalProcessed);
+
+                log_mapping(address.addr >> shiftAmountForAddressToVPN, pageToBeReplaced, replacedPageInfo.second >> shiftAmountForAddressToVPN, false);
+            } else {
+                //Available frames exist, no need to perform page replacement
                 pageTable.insertVPNtoPFNMapping(address.addr, currentFrame);
+                //Add new frame to WSClock
+                //If frame was added from a write instruction, dirty flag should be set to true
+                clock.addFrame(address.addr, totalProcessed, readWriteMode == WRITE);
+
+                log_mapping(address.addr >> shiftAmountForAddressToVPN, currentFrame, -1, false);
                 currentFrame++;
             }
         } else {
-            //std::cout << "write ";
-            int frame = pageTable.findVPNtoPFNMapping(address.addr);
-
-            if(frame == -1) {
-                pageTable.insertVPNtoPFNMapping(address.addr, currentFrame);
-                currentFrame++;
+            //Address is already mapped to a frame, update age of the frame
+            if(readWriteMode == READ) {
+                clock.updateFrame(frame, totalProcessed + 1);
+            } else {
+                //Write mode, set dirty flag to true
+                clock.setDirtyFlagForFrame(frame, totalProcessed + 1, true);
             }
+            log_mapping(address.addr >> shiftAmountForAddressToVPN, frame, -1, true);
         }
 
-        //std::cout << "total: " << totalProcessed << " misses: " << misses << std::endl;
+        totalProcessed++;
     }
 
     readWriteFile.close();
 
-    return 0;
+    return NORMAL_EXIT;
 }
