@@ -24,7 +24,7 @@ PROGRAM = countsubstrings
 $(PROGRAM) : $(OBJS)
 	$(CXX) -o $(PROGRAM) $^
 
-main.o : main.cpp main.h
+main.o : main.cpp
 	$(CXX) $(CXXFLAGS) main.cpp
 
 pagetable.o : PageTable.cpp PageTable.h
