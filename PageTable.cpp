@@ -32,7 +32,7 @@ unsigned int PageTable::getVPNFromVirtualAddress(unsigned int virtualAddress, in
     VPN >>= bitShifts[level];
     return VPN;
 }
-int PageTable::findVPNtoPFNMapping(unsigned int vpn) {
+int PageTable::findVPNtoPFNMapping(unsigned int vpn, bool log) {
     PageNode* currentNode = root;
     auto* vpns = new std::uint32_t[levelCount];
     int frame;
@@ -52,12 +52,12 @@ int PageTable::findVPNtoPFNMapping(unsigned int vpn) {
         }
     }
 
-    //if(frame != -1) log_vpns_pfn(levelCount, vpns, frame);
+    if(frame != -1 && log) log_vpns_pfn(levelCount, vpns, frame);
 
     return frame;
 }
 //Returns -1 if mapping was previously invalid, returns 0 otherwise
-int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame) {
+int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log) {
     PageNode* currentNode = root;
     auto* vpns = new std::uint32_t[levelCount];
     bool invalid = false;
@@ -80,7 +80,7 @@ int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame) {
         }
     }
 
-    //log_vpns_pfn(levelCount, vpns, frame);
+    if(log) log_vpns_pfn(levelCount, vpns, frame);
 
     if(invalid) return -1;
     else return 0;

@@ -14,6 +14,6 @@ public:
 
     void generateBitMasks(const int bitsPerLevel[], int numOfLevel);
     unsigned int getVPNFromVirtualAddress(unsigned int virtualAddress, int level);
-    int findVPNtoPFNMapping(unsigned int vpn);
-    int insertVPNtoPFNMapping(unsigned int vpn, int frame);
+    int findVPNtoPFNMapping(unsigned int vpn, bool log);
+    int insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log);
 };
