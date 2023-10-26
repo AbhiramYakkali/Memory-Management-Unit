@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
 
     char readWriteMode;
     //Iterate through the trace file until eof reached or number of processed lines (specified by cmd line argument) is reached
-    while((numAddressesToProcess == -1 || totalProcessed < numAddressesToProcess) && NextAddress(addressFile, &address) != EOF) {
+    while((numAddressesToProcess == -1 || totalProcessed < numAddressesToProcess) && NextAddress(addressFile, &address) != 0) {
         if(log_mode == MODE_OFFSET) {
             print_num_inHex(pageTable.getVPNFromVirtualAddress(address.addr, 3));
             totalProcessed++;
