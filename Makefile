@@ -12,7 +12,7 @@ CXXFLAGS=-std=c++11 -Wall -g3 -c
 OBJS = main.o PageTable.o PageNode.o WSClock.o log_helpers.o vaddr_tracereader.o
 
 # Program name
-PROGRAM = mmu
+PROGRAM = demandpaging
 
 # Rules format:
 # target : dependency1 dependency2 ... dependencyN

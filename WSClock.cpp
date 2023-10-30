@@ -32,10 +32,10 @@ std::pair<int, int> WSClock::getFrameToBeReplaced(int currentAge) {
         Frame* currentFrame = &frames->at(currentIndex);
 
         //Check if frame was accessed recently
-        if(currentAge - currentFrame->ageOfLastAccess >= ageConsideredRecent) {
+        if(currentAge - currentFrame->ageOfLastAccess > ageConsideredRecent) {
             if(!currentFrame->dirty) {
                 //This frame meets conditions, return
-                return std::make_pair(currentIndex, frames->at(currentIndex).address);
+                return std::make_pair(currentIndex, currentFrame->address);
             } else {
                 //Set dirty flag to false to simulate writing to disk
                 currentFrame->dirty = false;

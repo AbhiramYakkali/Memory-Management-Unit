@@ -5,6 +5,7 @@ public:
     PageNode* root;
 
     int levelCount;
+    int byteCount;
     unsigned int *bitMasks;
     int *bitShifts;
     int *entryCounts;
@@ -16,4 +17,6 @@ public:
     unsigned int getVPNFromVirtualAddress(unsigned int virtualAddress, int level);
     int findVPNtoPFNMapping(unsigned int vpn, bool log);
     int insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log);
+
+    int getBytesUsed();
 };

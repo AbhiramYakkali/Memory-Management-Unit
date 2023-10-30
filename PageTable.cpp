@@ -74,6 +74,7 @@ int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log) {
                 invalid = true;
             } else {
                 auto *nextNode = new PageNode(i + 1, this, i == levelCount - 2);
+                byteCount += sizeof(*nextNode);
                 currentNode->nextLevels->at(currentIndex) = nextNode;
                 currentNode = nextNode;
             }
@@ -86,11 +87,16 @@ int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log) {
     else return 0;
 }
 
+int PageTable::getBytesUsed() {
+    return byteCount;
+}
+
 PageTable::PageTable(int bitsPerLevel[], int numOfLevels) {
     levelCount = numOfLevels;
     bitMasks = new unsigned int[levelCount + 1];
     bitShifts = new int[levelCount + 1];
     entryCounts = new int[levelCount];
+    byteCount = 0;
 
     generateBitMasks(bitsPerLevel, numOfLevels);
 

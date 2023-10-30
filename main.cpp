@@ -12,9 +12,6 @@
 #include "vaddr_tracereader.h"
 #include "log_helpers.h"
 
-#define NORMAL_EXIT 0
-#define BAD_ARGUMENT 1
-
 #define READ '0'
 #define WRITE '1'
 
@@ -26,7 +23,7 @@ using namespace std;
 enum LogMode {MODE_BITMASKS, MODE_VA2PA, MODE_VPNS_PFN,
     MODE_VPN2PFN_PR, MODE_OFFSET, MODE_SUMMARY};
 
-#define MIN_ACCESES 1
+#define MIN_ACCESSES 1
 #define MIN_FRAMES 1
 #define MIN_AGE 1
 #define MIN_MANDATORY_ARGS 2
@@ -69,9 +66,9 @@ int main(int argc, char** argv) {
         switch (option) {
             case 'n': {
                 int num = atoi(optarg);
-                if (num < MIN_ACCESES) {
-                    cout << "Number of memory accesses must be a number, greater than 0" << endl;
-                    exit(NORMAL_EXIT);
+                if (num < MIN_ACCESSES) {
+                    cout << "Number of memory accesses must be a number, greater than 0." << endl;
+                    exit(BAD_EXIT);
                 }
                 numAddressesToProcess = num;
 
@@ -80,8 +77,8 @@ int main(int argc, char** argv) {
             case 'f': {
                 int num = atoi(optarg);
                 if (num < MIN_FRAMES) {
-                    cout << "Number of available frames must be a number, greater than 0" << endl;
-                    exit(NORMAL_EXIT);
+                    cout << "Number of available frames must be a number, greater than 0." << endl;
+                    exit(BAD_EXIT);
                 }
 
                 availableFrames = num;
@@ -90,8 +87,8 @@ int main(int argc, char** argv) {
             case 'a': {
                 int num = atoi(optarg);
                 if (num < MIN_AGE) {
-                    cout << "Age of last access considered recent must be a number greater, than 0" << endl;
-                    exit(NORMAL_EXIT);
+                    cout << "Age of last access considered recent must be a number, greater than 0." << endl;
+                    exit(BAD_EXIT);
                 }
 
                 ageRecentAccess = num;
@@ -129,7 +126,7 @@ int main(int argc, char** argv) {
                 }
 
                 cout << "Unknown Log Mode" << endl;
-                exit(NORMAL_EXIT);
+                exit(BAD_EXIT);
             }
             default:
                 cout << "error parsing optional arguments" << endl;
@@ -155,7 +152,7 @@ int main(int argc, char** argv) {
 
     if (optind >= argc){
         cout << "Level 0 page table must be at least 1 bit" << endl;
-        exit(NORMAL_EXIT);
+        exit(BAD_EXIT);
     }
 
 
@@ -164,11 +161,7 @@ int main(int argc, char** argv) {
 
         if (num_bits < MIN_BITS){
             cout << "Level " << i << " page table must be at least 1 bit" << endl;
-            exit(NORMAL_EXIT);
-        }
-        if (num_bits > MAXIMUM_TOTAL_BITS){
-            cout << "Too many bits used in page tables" << endl;
-            exit(NORMAL_EXIT);
+            exit(BAD_EXIT);
         }
 
         bits[i] = num_bits;
@@ -179,7 +172,7 @@ int main(int argc, char** argv) {
 
     if(totalPageTableBits > MAXIMUM_TOTAL_BITS) {
         cout << "Too many bits used in page tables";
-        exit(NORMAL_EXIT);
+        exit(BAD_EXIT);
     }
 
     // check if trace file exists
@@ -205,7 +198,9 @@ int main(int argc, char** argv) {
     PageTable pageTable(bits, num_levels);
 
     if(log_mode == MODE_BITMASKS) {
+        cout << "Bitmasks" << endl;
         for(int maskNumber = 0; maskNumber < num_levels; maskNumber++) {
+            std::cout << "level " << maskNumber << " mask ";
             print_num_inHex(pageTable.bitMasks[maskNumber]);
         }
 
@@ -220,9 +215,9 @@ int main(int argc, char** argv) {
     char readWriteMode;
     //Iterate through the trace file until eof reached or number of processed lines (specified by cmd line argument) is reached
     while((numAddressesToProcess == -1 || totalProcessed < numAddressesToProcess) && NextAddress(addressFile, &address) != 0) {
+        totalProcessed++;
         if(log_mode == MODE_OFFSET) {
-            print_num_inHex(pageTable.getVPNFromVirtualAddress(address.addr, 3));
-            totalProcessed++;
+            print_num_inHex(pageTable.getVPNFromVirtualAddress(address.addr, num_levels));
             continue;
         }
 
@@ -239,14 +234,15 @@ int main(int argc, char** argv) {
                 //No available frames, perform page replacement
                 auto replacedPageInfo = clock.getFrameToBeReplaced(totalProcessed);
                 int pageToBeReplaced = replacedPageInfo.first;
+                unsigned int replacedAddress = replacedPageInfo.second;
                 //Assign address to replaced page in the page table
                 pageTable.insertVPNtoPFNMapping(address.addr, pageToBeReplaced, log_mode == MODE_VPNS_PFN);
                 //Set the old address to -1 in the page table (invalid page)
-                pageTable.insertVPNtoPFNMapping(replacedPageInfo.second, -1, log_mode == MODE_VPNS_PFN);
+                pageTable.insertVPNtoPFNMapping(replacedAddress, -1, log_mode == MODE_VPNS_PFN);
                 //Update address and age info for the replaced page
-                clock.updateFrame(pageToBeReplaced, replacedPageInfo.second, totalProcessed);
+                clock.updateFrame(pageToBeReplaced, address.addr, totalProcessed);
 
-                logAddress(address.addr, pageToBeReplaced, replacedPageInfo.second, shiftAmountForAddressToVPN,
+                logAddress(address.addr, pageToBeReplaced, replacedAddress, shiftAmountForAddressToVPN,
                            getOffset(&pageTable, address.addr), false, log_mode);
 
                 pageReplacements++;
@@ -264,20 +260,18 @@ int main(int argc, char** argv) {
         } else {
             //Address is already mapped to a frame, update age of the frame
             if(readWriteMode == READ) {
-                clock.updateFrame(frame, totalProcessed + 1);
+                clock.updateFrame(frame, totalProcessed);
             } else {
                 //Write mode, set dirty flag to true
-                clock.setDirtyFlagForFrame(frame, totalProcessed + 1, true);
+                clock.setDirtyFlagForFrame(frame, totalProcessed, true);
             }
             logAddress(address.addr, frame, -1, shiftAmountForAddressToVPN, getOffset(&pageTable, address.addr), true,
                        log_mode);
         }
-
-        totalProcessed++;
     }
 
     if(log_mode == MODE_SUMMARY) {
-        log_summary(pow(2, ADDRESS_LENGTH - totalPageTableBits), pageReplacements, totalProcessed - misses, totalProcessed, currentFrame, 0);
+        log_summary(pow(2, ADDRESS_LENGTH - totalPageTableBits), pageReplacements, totalProcessed - misses, totalProcessed, currentFrame, pageTable.getBytesUsed());
     }
 
     readWriteFile.close();
