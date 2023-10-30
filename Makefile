@@ -9,10 +9,10 @@ CXX=g++
 CXXFLAGS=-std=c++11 -Wall -g3 -c
 
 # object files
-OBJS = main.o
+OBJS = main.o PageTable.o PageNode.o WSClock.o log_helpers.o vaddr_tracereader.o
 
 # Program name
-PROGRAM = countsubstrings
+PROGRAM = mmu
 
 # Rules format:
 # target : dependency1 dependency2 ... dependencyN
@@ -27,13 +27,13 @@ $(PROGRAM) : $(OBJS)
 main.o : main.cpp
 	$(CXX) $(CXXFLAGS) main.cpp
 
-pagetable.o : PageTable.cpp PageTable.h
+PageTable.o : PageTable.cpp PageTable.h
 	$(CXX) $(CXXFLAGS) PageTable.cpp
 
-pagenode.o : PageNode.cpp PageNode.h
+PageNode.o : PageNode.cpp PageNode.h
 	$(CXX) $(CXXFLAGS) PageNode.cpp
 
-wsclock.o : WSClock.cpp WSClock.h
+WSClock.o : WSClock.cpp WSClock.h
 	$(CXX) $(CXXFLAGS) WSClock.cpp
 
 log_helpers.o : log_helpers.cpp log_helpers.h
