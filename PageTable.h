@@ -5,7 +5,6 @@ public:
     PageNode* root;
 
     int levelCount;
-    int byteCount;
     unsigned int *bitMasks;
     int *bitShifts;
     int *entryCounts;

@@ -11,11 +11,9 @@ PageNode::PageNode(int level, PageTable *table, bool leaf) {
     if(leaf) {
         frameMappings = new std::vector<int>(entryCount, -1);
         nextLevels = nullptr;
-        table->byteCount += sizeof(frameMappings->at(0)) * entryCount;
     } else {
         nextLevels = new std::vector<PageNode*>(entryCount, nullptr);
         frameMappings = nullptr;
-        table->byteCount += sizeof(this) * entryCount;
     }
 }
 
