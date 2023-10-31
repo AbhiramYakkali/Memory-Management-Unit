@@ -87,8 +87,23 @@ int PageTable::insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log) {
     else return 0;
 }
 
+int PageTable::getBytesUsedInNode(PageNode *node) {
+    int bytesUsed = 0;
+    if(node->nextLevels != nullptr) {
+        for(int i = 0; i < node->nextLevels->size(); i++) {
+            PageNode* elem = node->nextLevels->at(i);
+            bytesUsed += sizeof(*elem);
+            if(elem != nullptr) bytesUsed += getBytesUsedInNode(elem);
+        }
+    } else {
+        for(int i = 0; i < node->frameMappings->size(); i++) {
+            bytesUsed += sizeof(node->frameMappings->at(i));
+        }
+    }
+    return bytesUsed;
+}
 int PageTable::getBytesUsed() {
-    return byteCount;
+    return getBytesUsedInNode(root);
 }
 
 PageTable::PageTable(int bitsPerLevel[], int numOfLevels) {

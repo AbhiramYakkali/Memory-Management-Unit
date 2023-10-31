@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
                 //Assign address to replaced page in the page table
                 pageTable.insertVPNtoPFNMapping(address.addr, pageToBeReplaced, log_mode == MODE_VPNS_PFN);
                 //Set the old address to -1 in the page table (invalid page)
-                pageTable.insertVPNtoPFNMapping(replacedAddress, -1, log_mode == MODE_VPNS_PFN);
+                pageTable.insertVPNtoPFNMapping(replacedAddress, -1, false);
                 //Update address and age info for the replaced page
                 clock.updateFrame(pageToBeReplaced, address.addr, totalProcessed);
 

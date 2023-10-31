@@ -19,4 +19,5 @@ public:
     int insertVPNtoPFNMapping(unsigned int vpn, int frame, bool log);
 
     int getBytesUsed();
+    int getBytesUsedInNode(PageNode* node);
 };
